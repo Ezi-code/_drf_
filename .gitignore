@@ -1,0 +1,6 @@
+./.vscode
+./api/__pycache__
+./home/__pycache__
+./home/migrations/__pycache__
+./home/migrations
+./dfr_tut/__pycache__
