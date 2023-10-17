@@ -9,13 +9,23 @@ from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
+from django.core.paginator import Paginator
 
 
 class PersonView(APIView):
     def get(self, request):
-        objs = Person.objects.all()
-        serializer = PersonSerializaer(objs, many=True)
-        return Response(serializer.data)
+        try:
+            objs = Person.objects.all()
+            page = request.GET.get('page', 1)
+            pag_size = 3
+            paginator = Paginator(objs, pag_size)
+            serializer = PersonSerializaer(paginator.page(page), many=True)
+            return Response(serializer.data, status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                "status": False,
+                "message": str(e),
+            }, status.HTTP_204_NO_CONTENT)
 
     def post(self, request):
         data = request.data
@@ -32,7 +42,7 @@ class PersonView(APIView):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        return Response(serializer.errors)
+        return Response(serializer.errors, status.HTTP_201_CREATED)
 
     def patch(self, request):
         data = request.data
@@ -40,13 +50,13 @@ class PersonView(APIView):
         serializer = PersonSerializaer(objs, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            return Response(serializer.data, status.HTTP_201_CREATED)
 
     def delete(self, request):
         data = request.data
         objs = Person.objects.get(id=data['id'])
         objs.delete()
-        return Response("Deleted")
+        return Response("Deleted", status.HTTP_200_OK)
 
 
 @api_view(['GET'])
