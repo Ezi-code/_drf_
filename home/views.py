@@ -1,9 +1,14 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .models import Person
-from .serializer import PersonSerializaer, RegisterSerializer
+from .serializer import PersonSerializaer, RegisterSerializer, LoginSerializer
 from rest_framework.views import APIView
 from rest_framework import viewsets
+from rest_framework import status
+from django.contrib.auth import authenticate
+from rest_framework.authtoken.models import Token
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import TokenAuthentication
 
 
 class PersonView(APIView):
@@ -87,6 +92,8 @@ def add_post(request):
 class PeopleView(viewsets.ModelViewSet):
     serializer_class = PersonSerializaer
     queryset = Person.objects.all()
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
 
     def list(self, request):
         search = request.GET.get('search')
@@ -103,5 +110,32 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            return Response({
+                "status": True,
+                "message": "user created",
+            }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors)
+
+
+class LoginView(APIView):
+    def post(self, request):
+        data = request.data
+        serializer = LoginSerializer(data=data)
+        if serializer.is_valid():
+
+            user = authenticate(
+                username=serializer.data['username'],             password=serializer.data['password'])
+            token, _ = Token.objects.get_or_create(user=user)
+
+        if not user:
+            return Response({
+                "status": False,
+                "message": "Invalid Credentials",
+            }, status.HTTP_403_FORBIDDEN)
+
+        if user:
+            return Response({
+                "status": True,
+                "message": "Login success",
+                "token": str(token)
+            }, status.HTTP_202_ACCEPTED)

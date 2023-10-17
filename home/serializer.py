@@ -3,6 +3,18 @@ from .models import Person, Color
 from django.contrib.auth.models import User
 
 
+class LoginSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=100)
+    password = serializers.CharField(max_length=100)
+
+    def validate(self, data):
+        user = User.objects.filter(username=data['username']).first()
+        if not user:
+            return serializers.ValidationError("User not found")
+        # return validated data
+        return data
+
+
 class RegisterSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=100)
     email = serializers.EmailField()
@@ -19,6 +31,13 @@ class RegisterSerializer(serializers.Serializer):
                 raise serializers.ValidationError("Email already exists")
 
         return data
+
+    def create(self, validated_data):
+        user = User.objects.create(
+            username=validated_data['username'], email=validated_data['email'])
+        user.set_password(validated_data['password'])
+        user.save()
+        return validated_data
 
 
 class ColorSerializer(serializers.ModelSerializer):
